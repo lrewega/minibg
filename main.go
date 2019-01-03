@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"time"
 
 	"github.com/fogleman/gg"
@@ -30,38 +31,39 @@ func randomImage(outputFilename string) error {
 }
 
 func usage() {
-	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s [image_file]\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s [-o <output_image> | <input_image>]\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
 func main() {
+	filename := os.ExpandEnv(fmt.Sprintf("$HOME/.%s.png", path.Base(os.Args[0])))
+	flag.StringVar(&filename, "out", filename, "output filename")
 	flag.Usage = usage
 	flag.Parse()
-	filename := os.ExpandEnv(fmt.Sprintf("$HOME/.%s.png", os.Args[0]))
-	switch len(os.Args) {
+	switch len(flag.Args()) {
+	case 0:
+		// no arguments
+		if err := randomImage(filename); err != nil {
+			fmt.Fprintf(os.Stderr, "error writing image to %q: %v\n", filename, err)
+			os.Exit(2)
+		}
+	case 1:
+		filename := flag.Arg(0)
+		info, err := os.Stat(filename)
+		if err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "error accessing file %q: %v\n", filename, err)
+			os.Exit(3)
+		} else if !info.Mode().IsRegular() {
+			fmt.Fprintf(os.Stderr, "file %q can't be used as it's not a regular file.\n", filename)
+			os.Exit(4)
+		}
 	default:
 		flag.Usage()
 		os.Exit(1)
-	case 1:
-		// no arguments
-		if err := randomImage(filename); err != nil {
-			fmt.Fprintf(os.Stderr, "error writing image to %q: %v", filename, err)
-			os.Exit(2)
-		}
-	case 2:
-		filename = os.Args[1]
-		info, err := os.Stat(filename)
-		if err != nil && !os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "error accessing file %q: %v", filename, err)
-			os.Exit(3)
-		} else if !info.Mode().IsRegular() {
-			fmt.Fprintf(os.Stderr, "file %q can't be used as it's not a regular file.", filename)
-			os.Exit(4)
-		}
 	}
 
 	if err := SetWallpaper(filename); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(5)
 	}
 }
