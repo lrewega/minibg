@@ -1,3 +1,5 @@
+// +build !android,linux
+
 package main
 
 import "os/exec"
