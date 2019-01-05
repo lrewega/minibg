@@ -17,6 +17,8 @@ func SetWallpaper(filename string) error {
 	if err := restartDock(); err != nil {
 		return fmt.Errorf("failed to restart dock: %v", err)
 	}
+
+	return nil
 }
 
 func updateWallpaper(filename string) error {
